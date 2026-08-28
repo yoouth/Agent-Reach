@@ -12,30 +12,34 @@ Playwright MCP（微软官方）在本机跑一个真实浏览器，是 Jina Rea
 npm install -g mcporter
 ```
 
-### 2. 注册 Playwright MCP（stdio，必须 keep-alive）
-编辑 `~/.mcporter/mcporter.json`，在 `mcpServers` 中加入：
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest", "--headless", "--browser=chromium"],
-      "lifecycle": "keep-alive"
-    }
-  }
-}
+### 2. 注册 Playwright MCP（stdio）
+```bash
+mcporter config add playwright --command npx \
+  --arg '@playwright/mcp@latest' --arg --headless --arg '--browser=chromium' \
+  --scope home
 ```
-**`lifecycle: keep-alive` 是硬性要求**：浏览器会话是有状态的，mcporter 默认
-每次调用起新进程，会导致「navigate 完再 snapshot 时页面没了」。keep-alive
-让 mcporter 守护进程复用同一个浏览器实例。
 
-### 3. 验证
+### 3. 启动 keep-alive daemon（硬性要求）
+```bash
+mcporter daemon start
+mcporter daemon status   # 应显示 playwright: connected
+```
+浏览器会话是有状态的：没有 daemon 时每次 `mcporter call` 起新进程，会导致
+「navigate 完再 snapshot 时页面没了」。mcporter 会自动把 playwright 识别为
+keep-alive server，由 daemon 复用同一个浏览器实例。
+
+### 4. 安装浏览器二进制（首次一次性）
+```bash
+npx -y @playwright/mcp@latest install-browser chrome-for-testing
+```
+MCP 不会自动下载浏览器（报错会提示这条命令），约 100–150 MB。
+
+### 5. 验证
 ```bash
 agent-reach doctor | grep -i playwright
 mcporter call playwright.browser_navigate url="https://example.com"
-mcporter call playwright.browser_snapshot
+mcporter call playwright.browser_snapshot   # 单独一次调用仍能看到页面 = daemon 生效
 ```
-首次调用会自动下载 Chromium（约 150 MB），耐心等待。
 
 ## 需要用户手动做的步骤
 

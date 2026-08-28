@@ -1,7 +1,9 @@
 # 浏览器自动化（Playwright MCP）
 
-重 JS 页面 / 需要交互的页面的最后兜底。前置：`~/.mcporter/mcporter.json` 里
-`playwright` server 已配置且 `lifecycle: keep-alive`（见 guides/setup-playwright.md）。
+重 JS 页面 / 需要交互的页面的最后兜底。前置（见 guides/setup-playwright.md）：
+`~/.mcporter/mcporter.json` 里已配置 `playwright` server、`mcporter daemon start`
+已运行（daemon 提供 keep-alive，跨调用复用同一浏览器）、浏览器二进制已装
+（`npx @playwright/mcp install-browser chrome-for-testing`）。
 没配置时不要现场发明方案，提示用户运行配置指南。
 
 ## 基本读取（navigate → snapshot）
