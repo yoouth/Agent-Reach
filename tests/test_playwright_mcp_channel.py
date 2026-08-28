@@ -18,7 +18,8 @@ class TestPlaywrightMcpChannel:
         assert ch.active_backend is None
         assert "npm install -g mcporter" in msg
         assert "npx @playwright/mcp" in msg
-        assert "lifecycle: keep-alive" in msg
+        assert "mcporter daemon start" in msg
+        assert "install-browser chrome-for-testing" in msg
 
     def test_configured_playwright_is_not_false_positive_active(
         self, monkeypatch, tmp_path

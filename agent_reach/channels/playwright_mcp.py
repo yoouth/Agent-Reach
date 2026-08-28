@@ -24,8 +24,10 @@ class PlaywrightMcpChannel(Channel):
                 "  npm install -g mcporter\n"
                 "  npx @playwright/mcp 配置为 mcporter 的 stdio server，"
                 "启用 --headless --browser=chromium。\n"
-                "重要：mcporter 的此 server 配置需设置 lifecycle: keep-alive，"
-                "因为浏览器会话在调用间保持状态。"
+                "重要：需运行 `mcporter daemon start` 提供 keep-alive，"
+                "因为浏览器会话在调用间保持状态；"
+                "首次还需 `npx @playwright/mcp install-browser chrome-for-testing`。"
+                "详见 guides/setup-playwright.md。"
             )
         try:
             inspection = inspect_mcporter_config()
