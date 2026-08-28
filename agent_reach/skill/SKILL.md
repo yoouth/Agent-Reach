@@ -20,7 +20,7 @@ description: >
   【路由方式】SKILL.md 包含路由表和常用命令，复杂场景需按需阅读对应分类的 references/*.md。
   分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn) / dev(github) / web(网页/文章/RSS) / video(YouTube/B站/播客) / finance(雪球/股票)。
 metadata:
-  homepage: https://github.com/Panniantong/Agent-Reach
+  homepage: https://github.com/yoouth/Agent-Reach
 ---
 
 # Agent Reach — 互联网能力路由器
@@ -35,18 +35,22 @@ metadata:
    只有用户任务明确需要该平台时，才按对应 reference 的只读命令手动验证。
 2. **声明你在用什么**：开始干活前说一句「使用 agent-reach 的 X 平台 / Y 后端」。
 3. **失败按 references 里的重试链处理**，不要瞎猜命令。
-4. **全网调研类任务**：组合多平台（Exa 搜索 + Twitter/Reddit 看讨论 + 小红书/B站看中文场景），并行收集再汇总。
+4. **全网调研类任务**：组合多平台（Exa/Firecrawl 搜索 + Twitter/Reddit 看讨论 + 小红书/B站看中文场景），并行收集再汇总。
 5. **替用户盯版本**：完成一次较大的调研/多平台任务后，顺手跑
    `agent-reach check-update`（很快，一个 API 调用）。有新版就在收尾汇报里附一句：
    「Agent Reach 有新版 vX.Y.Z，复制这句话给我即可更新：帮我更新 Agent Reach：
-   https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md」。
+   https://raw.githubusercontent.com/yoouth/agent-reach/main/docs/update.md」。
    不要中断当前任务去更新，也不要重复提醒同一个版本。
+6. **宿主约束优先**：宿主 Agent 的守则（SOUL.md / system prompt / 案件简报）对
+   后端选择有最终决定权。宿主限定了传输方式（例如「只许 Firecrawl 采集」）时，
+   只用该渠道，不要按本 skill 的默认路由换后端。
 
 ## 路由表
 
 | 用户意图 | 分类 | 详细文档 |
 |---------|------|---------|
 | 网页搜索/代码搜索 | search | [references/search.md](references/search.md) |
+| JS 渲染/反爬/交互页面 | web/browser | [references/web.md](references/web.md), [references/browser.md](references/browser.md) |
 | 小红书/推特/B站/V2EX/Reddit/Facebook/Instagram | social | [references/social.md](references/social.md) |
 | 招聘/职位/LinkedIn | career | [references/career.md](references/career.md) |
 | GitHub/代码 | dev | [references/dev.md](references/dev.md) |
@@ -62,6 +66,11 @@ mcporter call exa.web_search_exa query="query" numResults=5
 
 # 通用网页阅读
 curl -s "https://r.jina.ai/URL"
+
+# Firecrawl（需免费 Key，见 guides/setup-firecrawl.md）：搜索带正文 / JS·反爬页面抓取
+mcporter call firecrawl.firecrawl_search query="query" limit=5
+mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
+# 网页读取重试链：Jina → firecrawl_scrape → Playwright（references/browser.md）
 
 # GitHub 搜索
 gh search repos "query" --sort stars --limit 10
@@ -126,17 +135,18 @@ agent-reach doctor --json
 
 根据用户需求，阅读对应的详细文档：
 
-- [搜索工具](references/search.md) — Exa AI 搜索
+- [搜索工具](references/search.md) — Exa AI 搜索, Firecrawl 搜索
 - [社交媒体](references/social.md) — 小红书, Twitter, B站, V2EX, Reddit, Facebook, Instagram（多后端/登录态命令组）
 - [职场招聘](references/career.md) — LinkedIn
 - [开发工具](references/dev.md) — GitHub CLI
-- [网页阅读](references/web.md) — Jina Reader, RSS
+- [网页阅读](references/web.md) — Jina Reader, Firecrawl, RSS
+- [浏览器自动化](references/browser.md) — Playwright MCP（keep-alive 兜底）
 - [视频播客](references/video.md) — YouTube, B站, 小宇宙
 - [金融行情](references/finance.md) — 雪球股票行情、搜索、热门内容
 
 ## 配置渠道
 
 如果某个 channel 需要配置，获取安装指南：
-https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
+https://raw.githubusercontent.com/yoouth/agent-reach/main/docs/install.md
 
 用户只需提供 cookies，其他配置由 agent 完成。

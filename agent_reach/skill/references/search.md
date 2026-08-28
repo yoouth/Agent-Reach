@@ -1,6 +1,6 @@
 # 搜索工具
 
-Exa AI 搜索引擎。
+Exa AI 搜索引擎 + Firecrawl 搜索。
 
 ## Exa AI 搜索
 
@@ -27,10 +27,29 @@ mcporter call exa.web_search_exa query="library API code example" numResults=5
 - 可通过查询词定位官方文档和代码示例
 - 结果质量高
 
+## Firecrawl 搜索（带正文返回）
+
+需要先配置（见 guides/setup-firecrawl.md，需要免费 API Key）。
+
+```bash
+# 网页搜索，直接返回带内容的结果
+mcporter call firecrawl.firecrawl_search query="query" limit=5
+
+# 搜索并抓取结果正文（markdown）
+mcporter call firecrawl.firecrawl_search query="query" limit=5 scrapeOptions='{"formats":["markdown"]}'
+```
+
+### 特点
+
+- 结果自带页面正文，省一轮抓取
+- 新闻/时效性内容支持 `tbs` 时间过滤
+- 与 Exa 互补：Exa 找「哪些页面相关」，Firecrawl 把内容完整拿回来
+
 ## 与其他搜索工具对比
 
 | 工具 | 来源 | 适用场景 |
 |-----|------|---------|
-| Exa | agent-reach | 英文/技术/代码搜索 |
+| Exa | agent-reach | 英文/技术/代码搜索（语义相关性） |
+| Firecrawl | agent-reach | 搜索+抓正文一步到位、时效性内容 |
 | 智谱搜索 | my-mcp-tools | 中文搜索 |
 | GitHub 搜索 | agent-reach (dev.md) | 仓库/代码搜索 |
