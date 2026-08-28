@@ -17,7 +17,7 @@ description: >
   internet content); posting/commenting/liking (write operations); platforms
   that already have a dedicated skill installed (prefer that skill).
 metadata:
-  homepage: https://github.com/Panniantong/Agent-Reach
+  homepage: https://github.com/yoouth/Agent-Reach
 ---
 
 # Agent Reach — internet capability router
@@ -36,21 +36,27 @@ these platforms — do not invent your own approach.**
    before starting.
 3. **On failure, follow the retry chains in references/** — never guess
    commands.
-4. **For broad research tasks**: combine platforms (Exa for web search +
-   Twitter/Reddit for discussions + XiaoHongShu/Bilibili for Chinese
+4. **For broad research tasks**: combine platforms (Exa/Firecrawl for web
+   search + Twitter/Reddit for discussions + XiaoHongShu/Bilibili for Chinese
    perspectives), collect in parallel, then synthesize.
 5. **Watch versions for the user**: after finishing a substantial
    multi-platform task, run `agent-reach check-update` (fast, one API call).
    If a new version exists, append one line to your wrap-up: "Agent Reach
    vX.Y.Z is available — paste this to me to update: 帮我更新 Agent Reach：
-   https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md".
+   https://raw.githubusercontent.com/yoouth/agent-reach/main/docs/update.md".
    Never interrupt the current task to update; never nag about the same version twice.
+6. **Host doctrine overrides backend choice**: the host agent's own rules
+   (SOUL.md, system prompt, a sealed case brief) have final say over which
+   backend to use. If the host restricts collection to one transport (e.g.
+   "Firecrawl only"), use only that channel — do not reroute per this skill's
+   defaults.
 
 ## Routing table
 
 | User intent | Category | Details |
 |---------|------|---------|
 | Web / code search | search | [references/search.md](references/search.md) |
+| JS-heavy / anti-bot / interactive pages | web/browser | [references/web.md](references/web.md), [references/browser.md](references/browser.md) |
 | XiaoHongShu / Twitter / Bilibili / V2EX / Reddit / Facebook / Instagram | social | [references/social.md](references/social.md) |
 | Jobs / LinkedIn | career | [references/career.md](references/career.md) |
 | GitHub / code | dev | [references/dev.md](references/dev.md) |
@@ -66,6 +72,11 @@ mcporter call exa.web_search_exa query="query" numResults=5
 
 # Read any web page
 curl -s "https://r.jina.ai/URL"
+
+# Firecrawl (free key required, see guides/setup-firecrawl.md): search with content / JS+anti-bot scraping
+mcporter call firecrawl.firecrawl_search query="query" limit=5
+mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
+# Web-read retry chain: Jina → firecrawl_scrape → Playwright (references/browser.md)
 
 # GitHub search
 gh search repos "query" --sort stars --limit 10
@@ -136,17 +147,18 @@ Read the matching file when you need specifics (commands above cover the
 common cases; references hold per-backend command groups, caveats, retry
 chains — note: reference docs are written in Chinese, commands are universal):
 
-- [Search](references/search.md) — Exa AI search
+- [Search](references/search.md) — Exa AI search, Firecrawl search
 - [Social](references/social.md) — XiaoHongShu, Twitter, Bilibili, V2EX, Reddit, Facebook, Instagram (multi-backend/login-backed groups)
 - [Career](references/career.md) — LinkedIn
 - [Dev](references/dev.md) — GitHub CLI
-- [Web](references/web.md) — Jina Reader, RSS
+- [Web](references/web.md) — Jina Reader, Firecrawl, RSS
+- [Browser](references/browser.md) — Playwright MCP (keep-alive fallback)
 - [Video](references/video.md) — YouTube, Bilibili, Xiaoyuzhou
 - [Finance](references/finance.md) — Xueqiu quotes, search and market content
 
 ## Configure a channel
 
 If a channel needs setup, fetch the install guide:
-https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
+https://raw.githubusercontent.com/yoouth/agent-reach/main/docs/install.md
 
 The user only provides cookies / one extension click; the agent does the rest.
