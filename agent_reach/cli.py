@@ -131,6 +131,9 @@ def main():
     p_doctor = sub.add_parser("doctor", help="Check platform availability")
     p_doctor.add_argument("--json", action="store_true",
                           help="Output machine-readable JSON instead of the text report")
+    p_doctor.add_argument("--probe", action="store_true",
+                          help="Additionally run real remote verification for channels "
+                               "that support it (may take ~30s; makes live API calls)")
 
     # ── uninstall ──
     p_uninstall = sub.add_parser("uninstall", help="Remove all Agent Reach config, tokens, and skill files")
@@ -1973,7 +1976,7 @@ def _cmd_doctor(args=None):
     from agent_reach.config import Config
     from agent_reach.doctor import check_all, format_report
     config = Config(read_only=True)
-    results = check_all(config)
+    results = check_all(config, probe=bool(args is not None and getattr(args, "probe", False)))
 
     if args is not None and getattr(args, "json", False):
         print(json.dumps(results, ensure_ascii=False, indent=2))

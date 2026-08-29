@@ -35,7 +35,35 @@ def tmp_config(tmp_path):
     return Config(config_path=tmp_path / "config.yaml")
 
 
+class _StubProbeChannel(_StubChannel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.probe_called = False
+
+    def probe_check(self, config, status, message):
+        self.probe_called = True
+        self.active_backend = "Firecrawl via mcporter"
+        return "ok", "探测通过"
+
+
 class TestDoctor:
+    def test_check_all_probe_reaches_opt_in_channels_only(
+        self, tmp_config, monkeypatch
+    ):
+        probing = _StubProbeChannel("firecrawl", "抓取", 1, "warn", "已配置未验证")
+        plain = _StubChannel("web", "网页", 0, "ok", "可抓取网页")
+        monkeypatch.setattr(doctor, "get_all_channels", lambda: [probing, plain])
+
+        results = doctor.check_all(tmp_config)
+        assert probing.probe_called is False
+        assert results["firecrawl"]["status"] == "warn"
+
+        results = doctor.check_all(tmp_config, probe=True)
+        assert probing.probe_called is True
+        assert results["firecrawl"]["status"] == "ok"
+        assert results["firecrawl"]["active_backend"] == "Firecrawl via mcporter"
+        assert results["web"]["status"] == "ok"
+
     def test_check_all_collects_channel_results(self, tmp_config, monkeypatch):
         monkeypatch.setattr(
             doctor,

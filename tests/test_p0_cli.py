@@ -318,7 +318,7 @@ def test_install_does_not_implicitly_read_browser_cookies(monkeypatch, tmp_path,
     monkeypatch.setattr(cli, "_install_skill", lambda: None)
     monkeypatch.setattr(
         "agent_reach.doctor.check_all",
-        lambda _config: {},
+        lambda _config, probe=False: {},
     )
     monkeypatch.setattr(
         "agent_reach.doctor.format_report",
@@ -538,7 +538,9 @@ def test_doctor_never_installs_or_updates_skill(monkeypatch, capsys):
     import agent_reach.config as config_module
 
     monkeypatch.setattr(config_module, "Config", _MemoryConfig)
-    monkeypatch.setattr("agent_reach.doctor.check_all", lambda _config: {})
+    monkeypatch.setattr(
+        "agent_reach.doctor.check_all", lambda _config, probe=False: {}
+    )
     monkeypatch.setattr("agent_reach.doctor.format_report", lambda _results: "report")
     monkeypatch.setattr(
         cli,
@@ -572,7 +574,7 @@ def test_watch_uses_read_only_config(monkeypatch, capsys):
     monkeypatch.setattr(config_module, "Config", RecordingConfig)
     monkeypatch.setattr(
         "agent_reach.doctor.check_all",
-        lambda _config: {
+        lambda _config, probe=False: {
             "web": {
                 "status": "ok",
                 "name": "网页",

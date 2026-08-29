@@ -68,7 +68,9 @@ class TestCLI:
         config_dir = tmp_path / ".agent-reach"
         monkeypatch.setattr(Config, "CONFIG_DIR", config_dir)
         monkeypatch.setattr(Config, "CONFIG_FILE", config_dir / "config.yaml")
-        monkeypatch.setattr("agent_reach.doctor.check_all", lambda config: {})
+        monkeypatch.setattr(
+            "agent_reach.doctor.check_all", lambda config, probe=False: {}
+        )
         monkeypatch.setattr("agent_reach.doctor.format_report", lambda results: "report")
         install_calls = []
         monkeypatch.setattr(

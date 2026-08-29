@@ -140,6 +140,118 @@ class TestFirecrawlChannel:
         assert ch.active_backend is None
         assert "editor imports" in msg
 
+    def _configured_channel(self, monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        config_path = tmp_path / "config" / "mcporter.json"
+        config_path.parent.mkdir()
+        config_path.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "firecrawl": {"command": "npx", "args": ["-y", "firecrawl-mcp"]}
+                    },
+                    "imports": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/mcporter")
+        from agent_reach.channels.firecrawl import FirecrawlChannel
+
+        return FirecrawlChannel()
+
+    def test_probe_success_upgrades_warn_to_ok(self, monkeypatch, tmp_path):
+        from agent_reach import probe as probe_mod
+        from agent_reach.channels import firecrawl as fc_mod
+
+        ch = self._configured_channel(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            fc_mod,
+            "probe_command",
+            lambda *_a, **_k: probe_mod.ProbeResult("ok", output='{"success":true,"data":[]}'),
+        )
+        status, msg = ch.check()
+        assert status == "warn"
+        status, msg = ch.probe_check(None, status, msg)
+        assert status == "ok"
+        assert ch.active_backend == "Firecrawl via mcporter"
+        assert "零积分" in msg
+
+    def test_probe_invalid_key_reports_error(self, monkeypatch, tmp_path):
+        from agent_reach import probe as probe_mod
+        from agent_reach.channels import firecrawl as fc_mod
+
+        ch = self._configured_channel(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            fc_mod,
+            "probe_command",
+            lambda *_a, **_k: probe_mod.ProbeResult(
+                "error", output="Unauthorized: Invalid token"
+            ),
+        )
+        status, msg = ch.check()
+        status, msg = ch.probe_check(None, status, msg)
+        assert status == "error"
+        assert "FIRECRAWL_API_KEY" in msg
+        assert ch.active_backend is None
+
+    def test_probe_inband_failure_with_exit_zero_is_not_ok(
+        self, monkeypatch, tmp_path
+    ):
+        # mcporter 0.9.0 exits 0 on tool-level failure; the error is in-band.
+        from agent_reach import probe as probe_mod
+        from agent_reach.channels import firecrawl as fc_mod
+
+        ch = self._configured_channel(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            fc_mod,
+            "probe_command",
+            lambda *_a, **_k: probe_mod.ProbeResult(
+                "ok",
+                output="Tool 'firecrawl_monitor_list' execution failed: "
+                "Unauthorized: Invalid token",
+            ),
+        )
+        status, msg = ch.check()
+        status, msg = ch.probe_check(None, status, msg)
+        assert status == "error"
+        assert "FIRECRAWL_API_KEY" in msg
+        assert ch.active_backend is None
+
+    def test_probe_timeout_reports_error(self, monkeypatch, tmp_path):
+        from agent_reach import probe as probe_mod
+        from agent_reach.channels import firecrawl as fc_mod
+
+        ch = self._configured_channel(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            fc_mod,
+            "probe_command",
+            lambda *_a, **_k: probe_mod.ProbeResult("timeout", hint="`mcporter` 响应超时"),
+        )
+        status, msg = ch.check()
+        status, msg = ch.probe_check(None, status, msg)
+        assert status == "error"
+        assert "超时" in msg
+        assert ch.active_backend is None
+
+    def test_probe_skipped_when_not_configured(self, monkeypatch, tmp_path):
+        from agent_reach.channels import firecrawl as fc_mod
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(shutil, "which", lambda _: None)
+        monkeypatch.setattr(
+            fc_mod,
+            "probe_command",
+            lambda *_a, **_k: pytest.fail("probe must not run when unconfigured"),
+        )
+        from agent_reach.channels.firecrawl import FirecrawlChannel
+
+        ch = FirecrawlChannel()
+        status, msg = ch.check()
+        assert status == "off"
+        status2, msg2 = ch.probe_check(None, status, msg)
+        assert (status2, msg2) == (status, msg)
+
     def test_can_handle_returns_false(self):
         from agent_reach.channels.firecrawl import FirecrawlChannel
 

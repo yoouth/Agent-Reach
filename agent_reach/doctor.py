@@ -13,16 +13,21 @@ from agent_reach.config import Config
 from agent_reach.utils.text import scrub_url_credentials
 
 
-def check_all(config: Config) -> Dict[str, dict]:
+def check_all(config: Config, probe: bool = False) -> Dict[str, dict]:
     """Check all channels and return status dict.
 
     A single misbehaving channel must never take the whole report down,
     so per-channel exceptions degrade to status="error".
+
+    probe=True additionally runs each channel's opt-in probe_check()
+    (real remote verification); channels without one are unaffected.
     """
     results = {}
     for ch in get_all_channels():
         try:
             status, message = ch.check(config)
+            if probe and hasattr(ch, "probe_check"):
+                status, message = ch.probe_check(config, status, message)
             active = getattr(ch, "active_backend", None)
         except Exception as e:  # noqa: BLE001 — doctor must survive any channel
             # Channels are registry singletons: a stale active_backend from a
