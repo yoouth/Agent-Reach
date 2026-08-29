@@ -40,7 +40,7 @@ mcporter call playwright.browser_close               # 任务结束后关闭
 
 ## 规则
 
-- **重试链位置**：Jina Reader → firecrawl_scrape → Playwright。不要跳过前两级。
+- **链路位置**：firecrawl_scrape → Playwright → Jina Reader。Playwright 是 Firecrawl 的备份级，交互/登录态页面直达。
 - **不是反爬工具**：Cloudflare 类防护拦住就停，报告拿不到，不要尝试绕过。
 - **登录态**：只用用户明确授权的会话；不替用户登录，不绕过访问控制。
 - **状态假设**：每次 navigate 后重新 snapshot 拿 ref，不要复用旧 ref。

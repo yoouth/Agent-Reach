@@ -39,11 +39,17 @@ mcporter call firecrawl.firecrawl_search query="query" limit=5
 mcporter call firecrawl.firecrawl_search query="query" limit=5 scrapeOptions='{"formats":["markdown"]}'
 ```
 
+```bash
+# 面向编码 Agent 的开发者搜索（GitHub issues/合并 PR/README/精选文档索引）
+mcporter call firecrawl.firecrawl_developer_search query="报错信息或 API 用法"
+```
+
 ### 特点
 
 - 结果自带页面正文，省一轮抓取
 - 新闻/时效性内容支持 `tbs` 时间过滤
 - 与 Exa 互补：Exa 找「哪些页面相关」，Firecrawl 把内容完整拿回来
+- 完整工具索引（map/crawl/extract/parse/research 等 27 个）见 [firecrawl.md](firecrawl.md)
 
 ## 与其他搜索工具对比
 

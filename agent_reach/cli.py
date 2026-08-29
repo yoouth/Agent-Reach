@@ -536,6 +536,22 @@ def _install_skill(force: bool = True):
                     with open(os.path.join(refs_target, name), "w", encoding="utf-8") as f:
                         f.write(content)
 
+            # Copy guides/ so skill-doc links (guides/setup-*.md) resolve
+            # in installed skills, not just in the repo.
+            try:
+                guides_pkg = importlib.resources.files("agent_reach").joinpath("guides")
+            except Exception:
+                from pathlib import Path
+                guides_pkg = Path(__file__).resolve().parent / "guides"
+            guides_target = os.path.join(target, "guides")
+            os.makedirs(guides_target, exist_ok=True)
+            for g_file in guides_pkg.iterdir():
+                name = g_file.name if hasattr(g_file, 'name') else str(g_file).split('/')[-1]
+                if name.endswith(".md"):
+                    content = g_file.read_text(encoding="utf-8") if hasattr(g_file, 'read_text') else g_file.read_text()
+                    with open(os.path.join(guides_target, name), "w", encoding="utf-8") as f:
+                        f.write(content)
+
             return "installed"
         except Exception as e:
             print(f"  Warning: Could not install skill: {e}")

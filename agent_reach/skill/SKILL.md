@@ -18,7 +18,7 @@ description: >
   发帖/评论/点赞等写操作；已有专门 skill 的平台（先用专门 skill）。
 
   【路由方式】SKILL.md 包含路由表和常用命令，复杂场景需按需阅读对应分类的 references/*.md。
-  分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn) / dev(github) / web(网页/文章/RSS) / video(YouTube/B站/播客) / finance(雪球/股票)。
+  分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn) / dev(github) / web(网页/文章/RSS) / browser(浏览器自动化) / video(YouTube/B站/播客) / finance(雪球/股票)。
 metadata:
   homepage: https://github.com/yoouth/Agent-Reach
 ---
@@ -67,10 +67,13 @@ mcporter call exa.web_search_exa query="query" numResults=5
 # 通用网页阅读
 curl -s "https://r.jina.ai/URL"
 
-# Firecrawl（需免费 Key，见 guides/setup-firecrawl.md）：搜索带正文 / JS·反爬页面抓取
+# Firecrawl（需免费 Key，见 guides/setup-firecrawl.md）：配置好即为网页读取首选
 mcporter call firecrawl.firecrawl_search query="query" limit=5
 mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
-# 网页读取重试链：Jina → firecrawl_scrape → Playwright（references/browser.md）
+mcporter call firecrawl.firecrawl_developer_search query="报错信息或 API 用法"
+mcporter call firecrawl.firecrawl_extract urls='["URL"]' schema='{...}'
+# 网页读取链：firecrawl_scrape → Playwright → Jina（完整 27 工具索引见 references/firecrawl.md）
+# 链路验活：agent-reach doctor --probe（零消耗真实调用）
 
 # GitHub 搜索
 gh search repos "query" --sort stars --limit 10
@@ -136,10 +139,11 @@ agent-reach doctor --json
 根据用户需求，阅读对应的详细文档：
 
 - [搜索工具](references/search.md) — Exa AI 搜索, Firecrawl 搜索
+- [Firecrawl 索引](references/firecrawl.md) — 全部 27 个工具：scrape/search/map/crawl/extract/parse + 各家族
 - [社交媒体](references/social.md) — 小红书, Twitter, B站, V2EX, Reddit, Facebook, Instagram（多后端/登录态命令组）
 - [职场招聘](references/career.md) — LinkedIn
 - [开发工具](references/dev.md) — GitHub CLI
-- [网页阅读](references/web.md) — Jina Reader, Firecrawl, RSS
+- [网页阅读](references/web.md) — Firecrawl 首选, Playwright 备份, Jina 兜底, RSS
 - [浏览器自动化](references/browser.md) — Playwright MCP（keep-alive 兜底）
 - [视频播客](references/video.md) — YouTube, B站, 小宇宙
 - [金融行情](references/finance.md) — 雪球股票行情、搜索、热门内容

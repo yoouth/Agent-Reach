@@ -2,22 +2,10 @@
 
 通用网页、RSS。
 
-## 通用网页 (Jina Reader)
+## Firecrawl 抓取（首选）
 
-```bash
-# 读取任意网页内容
-curl -s "https://r.jina.ai/URL"
-
-# 示例
-curl -s "https://r.jina.ai/https://example.com/article"
-```
-
-**适用场景**: 大多数网页可以直接用 Jina Reader 读取。
-
-## Firecrawl 抓取（JS 渲染 / 反爬兜底）
-
-Jina 返回反爬验证页、空内容或明显残缺时，换 Firecrawl（需配置，见
-guides/setup-firecrawl.md）：
+配置好即为网页读取首选（见 guides/setup-firecrawl.md；完整工具索引见
+[firecrawl.md](firecrawl.md)）：
 
 ```bash
 # 单页抓取（markdown）
@@ -31,12 +19,26 @@ mcporter call firecrawl.firecrawl_map url="https://example.com" limit=50
 mcporter call firecrawl.firecrawl_crawl url="https://example.com/docs" limit=10
 ```
 
-## 网页读取重试链
+## 通用网页 (Jina Reader)
 
-**Jina Reader → firecrawl_scrape → Playwright（references/browser.md）**
+```bash
+# 读取任意网页内容
+curl -s "https://r.jina.ai/URL"
 
-按顺序降级，不要跳级：Jina 免费零配置；Firecrawl 处理 JS/反爬但耗额度；
-Playwright 本机浏览器兜底（交互页面）。三级都失败就如实报告，不要发明第四种方案。
+# 示例
+curl -s "https://r.jina.ai/https://example.com/article"
+```
+
+**适用场景**: Firecrawl 未配置时的默认读取方式，及链路兜底（免费零配置）。
+
+## 网页读取链
+
+**firecrawl_scrape → Playwright（references/browser.md）→ Jina Reader**
+
+Firecrawl 优先：质量最好，JS/反爬直接过（耗额度）。Playwright 本机浏览器
+做备份（交互/登录态页面）。Jina 免费零配置，作为最终兜底；Firecrawl 未配置
+时它就是默认。三级都失败就如实报告，不要发明第四种方案。
+宿主有传输方针时按 SKILL 规则 6 优先服从宿主。
 
 ## Web Reader (MCP)
 
@@ -69,8 +71,8 @@ for e in feedparser.parse('FEED_URL').entries[:5]:
 
 | 场景 | 推荐工具 |
 |-----|---------|
-| 通用网页 | Jina Reader (`curl r.jina.ai`) |
-| JS 渲染/反爬/结构化提取/整站 | Firecrawl (`firecrawl_scrape` 等) |
-| 交互页面/登录态兜底 | Playwright ([browser.md](browser.md)) |
+| 网页读取首选（已配置时） | Firecrawl (`firecrawl_scrape` 等，[firecrawl.md](firecrawl.md)) |
+| 交互页面/登录态备份 | Playwright ([browser.md](browser.md)) |
+| 零配置兜底 / Firecrawl 未配置 | Jina Reader (`curl r.jina.ai`) |
 | 需要图片/格式控制 | web-reader MCP |
 | RSS 订阅 | feedparser |

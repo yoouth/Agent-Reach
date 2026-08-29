@@ -33,7 +33,7 @@ npm install -g mcporter
   "mcpServers": {
     "firecrawl": {
       "command": "npx",
-      "args": ["-y", "firecrawl-mcp"],
+      "args": ["-y", "firecrawl-mcp@3.24.0"],
       "env": { "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}" }
     }
   }
@@ -41,17 +41,26 @@ npm install -g mcporter
 ```
 Agent 编辑该文件时禁止读取或回显 Key 的值，始终用环境变量引用。
 
+版本锁定 `@3.24.0` 是有意的：不锁版本时每次冷启动 `npx -y` 都可能拉到未审
+的新版（含 major），多个配置副本还会各跑各的版本。升级应当是显式决定——
+改这一处并重新验证即可。
+
 ### 3. 验证
 ```bash
-agent-reach doctor | grep -i firecrawl
+# 零消耗链路验活：真实调用一次 firecrawl_monitor_list（只读）
+agent-reach doctor --probe | grep -i firecrawl
+# 或手动：
 mcporter call firecrawl.firecrawl_scrape url="https://example.com" formats='["markdown"]'
 ```
+注意：mcporter 对工具级失败仍以退出码 0 结束，错误在输出文本里
+（如 `Unauthorized: Invalid token`）——判断成败要看输出，不能只看退出码。
 
 ## 常见问题
 
 **Q: 什么时候用 Firecrawl，什么时候用 Jina Reader？**
-A: 先 `curl r.jina.ai`（零配置、免费）；Jina 返回反爬验证页或空内容时，换
-`firecrawl_scrape`；仍失败再走 Playwright（见 references/browser.md）。
+A: 配置好 Firecrawl 后它就是首选（质量最好、JS/反爬直接过）；Playwright 做
+备份（交互/登录态页面，见 references/browser.md）；Jina 免费零配置，作为最
+终兜底或未配置 Firecrawl 时的默认。
 
 **Q: 和 Exa 什么关系？**
 A: Exa 管语义搜索（找到哪些页面相关），Firecrawl 管抓取与带正文搜索（把页面

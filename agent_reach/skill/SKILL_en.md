@@ -73,10 +73,13 @@ mcporter call exa.web_search_exa query="query" numResults=5
 # Read any web page
 curl -s "https://r.jina.ai/URL"
 
-# Firecrawl (free key required, see guides/setup-firecrawl.md): search with content / JS+anti-bot scraping
+# Firecrawl (free key required, see guides/setup-firecrawl.md): preferred web reader once configured
 mcporter call firecrawl.firecrawl_search query="query" limit=5
 mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
-# Web-read retry chain: Jina → firecrawl_scrape → Playwright (references/browser.md)
+mcporter call firecrawl.firecrawl_developer_search query="error message or API usage"
+mcporter call firecrawl.firecrawl_extract urls='["URL"]' schema='{...}'
+# Web-read chain: firecrawl_scrape → Playwright → Jina (full 27-tool index: references/firecrawl.md)
+# Verify the chain live: agent-reach doctor --probe (zero-credit real call)
 
 # GitHub search
 gh search repos "query" --sort stars --limit 10
@@ -148,10 +151,11 @@ common cases; references hold per-backend command groups, caveats, retry
 chains — note: reference docs are written in Chinese, commands are universal):
 
 - [Search](references/search.md) — Exa AI search, Firecrawl search
+- [Firecrawl](references/firecrawl.md) — full 27-tool index: scrape/search/map/crawl/extract/parse + families
 - [Social](references/social.md) — XiaoHongShu, Twitter, Bilibili, V2EX, Reddit, Facebook, Instagram (multi-backend/login-backed groups)
 - [Career](references/career.md) — LinkedIn
 - [Dev](references/dev.md) — GitHub CLI
-- [Web](references/web.md) — Jina Reader, Firecrawl, RSS
+- [Web](references/web.md) — Firecrawl first, Playwright backup, Jina fallback, RSS
 - [Browser](references/browser.md) — Playwright MCP (keep-alive fallback)
 - [Video](references/video.md) — YouTube, Bilibili, Xiaoyuzhou
 - [Finance](references/finance.md) — Xueqiu quotes, search and market content
