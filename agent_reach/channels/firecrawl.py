@@ -22,9 +22,12 @@ class FirecrawlChannel(Channel):
             return "off", (
                 "需要 mcporter + Firecrawl MCP。安装：\n"
                 "  npm install -g mcporter\n"
-                "  mcporter config add firecrawl --scope home\n"
+                "  mcporter config add firecrawl --command npx --arg -y "
+                "--arg firecrawl-mcp "
+                "--env 'FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}' --scope home\n"
                 "注意：需要设置 FIRECRAWL_API_KEY 环境变量。"
                 "免费 Key 可从 https://www.firecrawl.dev 获取。"
+                "详见 guides/setup-firecrawl.md。"
             )
         try:
             inspection = inspect_mcporter_config()
@@ -42,5 +45,8 @@ class FirecrawlChannel(Channel):
             )
         return "off", (
             "mcporter 已装但 Firecrawl 未配置。运行：\n"
-            "  mcporter config add firecrawl --scope home"
+            "  mcporter config add firecrawl --command npx --arg -y "
+            "--arg firecrawl-mcp "
+            "--env 'FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}' --scope home\n"
+            "并设置 FIRECRAWL_API_KEY 环境变量；详见 guides/setup-firecrawl.md。"
         )

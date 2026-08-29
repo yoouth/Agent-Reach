@@ -3,6 +3,7 @@
 
 import json
 import shutil
+import subprocess
 
 import pytest
 
@@ -17,9 +18,27 @@ class TestFirecrawlChannel:
         assert status == "off"
         assert ch.active_backend is None
         assert "npm install -g mcporter" in msg
-        assert "mcporter config add firecrawl" in msg
+        assert "mcporter config add firecrawl --command npx" in msg
         assert "FIRECRAWL_API_KEY" in msg
         assert "https://www.firecrawl.dev" in msg
+        assert "guides/setup-firecrawl.md" in msg
+
+    def test_mcporter_is_never_executed(self, monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/mcporter")
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            lambda *_args, **_kwargs: pytest.fail(
+                "Doctor must not execute mcporter"
+            ),
+        )
+        from agent_reach.channels.firecrawl import FirecrawlChannel
+
+        ch = FirecrawlChannel()
+        status, msg = ch.check()
+        assert status == "off"
+        assert ch.active_backend is None
 
     def test_configured_firecrawl_is_not_false_positive_active(
         self, monkeypatch, tmp_path
@@ -27,11 +46,16 @@ class TestFirecrawlChannel:
         monkeypatch.chdir(tmp_path)
         config_path = tmp_path / "config" / "mcporter.json"
         config_path.parent.mkdir()
+        secret = "sk-should-never-leak-abc123"
         config_path.write_text(
             json.dumps(
                 {
                     "mcpServers": {
-                        "firecrawl": {"baseUrl": "https://mcp.example.test"}
+                        "firecrawl": {
+                            "command": "npx",
+                            "args": ["-y", "firecrawl-mcp"],
+                            "env": {"FIRECRAWL_API_KEY": secret},
+                        }
                     },
                     "imports": [],
                 }
@@ -46,6 +70,7 @@ class TestFirecrawlChannel:
         assert status == "warn"
         assert "未启动" in msg or "未启动远端服务" in msg
         assert ch.active_backend is None
+        assert secret not in msg
 
     def test_config_metadata_containing_firecrawl_is_not_a_backend(
         self, monkeypatch, tmp_path
