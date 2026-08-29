@@ -48,8 +48,8 @@ mcporter call playwright.browser_snapshot   # 单独一次调用仍能看到页�
 ## 常见问题
 
 **Q: 什么时候用它？**
-A: 重试链末端：Jina Reader → firecrawl_scrape → Playwright。前两个都失败或
-页面需要交互（点击、滚动、输入）时才用。
+A: 网页读取链的备份级：firecrawl_scrape → Playwright → Jina Reader。
+Firecrawl 失败或页面需要交互（点击、滚动、输入）时用；Jina 是最终兜底。
 
 **Q: 登录态页面怎么处理？**
 A: 只用用户明确授权的会话。不要替用户登录，不要绕过访问控制；

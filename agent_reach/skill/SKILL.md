@@ -64,14 +64,14 @@ metadata:
 # Exa 网页搜索
 mcporter call exa.web_search_exa query="query" numResults=5
 
-# 通用网页阅读
+# 通用网页阅读（Firecrawl 未配置时的默认/兜底）
 curl -s "https://r.jina.ai/URL"
 
 # Firecrawl（需免费 Key，见 guides/setup-firecrawl.md）：配置好即为网页读取首选
 mcporter call firecrawl.firecrawl_search query="query" limit=5
 mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
 mcporter call firecrawl.firecrawl_developer_search query="报错信息或 API 用法"
-mcporter call firecrawl.firecrawl_extract urls='["URL"]' schema='{...}'
+mcporter call firecrawl.firecrawl_scrape url="URL" formats='["json"]' jsonOptions='{"schema":{...}}'  # 结构化提取
 # 网页读取链：firecrawl_scrape → Playwright → Jina（完整 27 工具索引见 references/firecrawl.md）
 # 链路验活：agent-reach doctor --probe（零消耗真实调用）
 
@@ -139,7 +139,7 @@ agent-reach doctor --json
 根据用户需求，阅读对应的详细文档：
 
 - [搜索工具](references/search.md) — Exa AI 搜索, Firecrawl 搜索
-- [Firecrawl 索引](references/firecrawl.md) — 全部 27 个工具：scrape/search/map/crawl/extract/parse + 各家族
+- [Firecrawl 索引](references/firecrawl.md) — 全部工具：scrape/search/map/crawl/parse + 各家族
 - [社交媒体](references/social.md) — 小红书, Twitter, B站, V2EX, Reddit, Facebook, Instagram（多后端/登录态命令组）
 - [职场招聘](references/career.md) — LinkedIn
 - [开发工具](references/dev.md) — GitHub CLI

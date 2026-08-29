@@ -219,6 +219,13 @@ class TestSkillCommand(unittest.TestCase):
             self.assertTrue(
                 os.path.exists(os.path.join(skill_parent, "agent-reach", "references"))
             )
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(
+                        skill_parent, "agent-reach", "guides", "setup-firecrawl.md"
+                    )
+                )
+            )
 
 
 if __name__ == "__main__":

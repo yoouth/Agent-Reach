@@ -90,6 +90,24 @@ class TestCLI:
         assert "preserving existing files" not in out
         assert f"Skill installed for Agent: {skill_dir}" not in out
 
+    def test_doctor_probe_flag_reaches_check_all(self, monkeypatch, capsys):
+        recorded = {}
+
+        def fake_check_all(config, probe=False):
+            recorded["probe"] = probe
+            return {}
+
+        monkeypatch.setattr("agent_reach.doctor.check_all", fake_check_all)
+        monkeypatch.setattr(
+            "agent_reach.doctor.format_report", lambda results: "report"
+        )
+
+        cli._cmd_doctor(Namespace(json=False))
+        assert recorded["probe"] is False
+
+        cli._cmd_doctor(Namespace(json=False, probe=True))
+        assert recorded["probe"] is True
+
     def test_transcribe_command_prints_text(self, capsys):
         with patch("agent_reach.transcribe.transcribe", return_value="hello transcript"):
             with patch("sys.argv", ["agent-reach", "transcribe", "audio.mp3"]):

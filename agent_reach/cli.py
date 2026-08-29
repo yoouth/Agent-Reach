@@ -524,33 +524,33 @@ def _install_skill(force: bool = True):
             with open(os.path.join(target, "SKILL.md"), "w", encoding="utf-8") as f:
                 f.write(skill_md)
 
-            # Copy references/ directory
-            refs_pkg = skill_pkg.joinpath("references")
-            refs_target = os.path.join(target, "references")
-            os.makedirs(refs_target, exist_ok=True)
+            def _copy_md_dir(src_pkg, sub: str, required: bool = True) -> None:
+                """Copy every .md in src_pkg into <target>/<sub>.
 
-            for ref_file in refs_pkg.iterdir():
-                name = ref_file.name if hasattr(ref_file, 'name') else str(ref_file).split('/')[-1]
-                if name.endswith(".md"):
-                    content = ref_file.read_text(encoding="utf-8") if hasattr(ref_file, 'read_text') else ref_file.read_text()
-                    with open(os.path.join(refs_target, name), "w", encoding="utf-8") as f:
-                        f.write(content)
+                required=False keeps an optional directory (guides/) from
+                failing the whole skill install after SKILL.md is written.
+                """
+                try:
+                    sub_target = os.path.join(target, sub)
+                    os.makedirs(sub_target, exist_ok=True)
+                    for f_entry in src_pkg.iterdir():
+                        name = getattr(f_entry, "name", str(f_entry).rsplit("/", 1)[-1])
+                        if name.endswith(".md"):
+                            with open(os.path.join(sub_target, name), "w", encoding="utf-8") as out:
+                                out.write(f_entry.read_text(encoding="utf-8"))
+                except Exception:
+                    if required:
+                        raise
 
-            # Copy guides/ so skill-doc links (guides/setup-*.md) resolve
-            # in installed skills, not just in the repo.
+            # Copy references/, and guides/ so skill-doc links
+            # (guides/setup-*.md) resolve in installed skills too.
             try:
-                guides_pkg = importlib.resources.files("agent_reach").joinpath("guides")
+                pkg_root = importlib.resources.files("agent_reach")
             except Exception:
                 from pathlib import Path
-                guides_pkg = Path(__file__).resolve().parent / "guides"
-            guides_target = os.path.join(target, "guides")
-            os.makedirs(guides_target, exist_ok=True)
-            for g_file in guides_pkg.iterdir():
-                name = g_file.name if hasattr(g_file, 'name') else str(g_file).split('/')[-1]
-                if name.endswith(".md"):
-                    content = g_file.read_text(encoding="utf-8") if hasattr(g_file, 'read_text') else g_file.read_text()
-                    with open(os.path.join(guides_target, name), "w", encoding="utf-8") as f:
-                        f.write(content)
+                pkg_root = Path(__file__).resolve().parent
+            _copy_md_dir(skill_pkg.joinpath("references"), "references")
+            _copy_md_dir(pkg_root.joinpath("guides"), "guides", required=False)
 
             return "installed"
         except Exception as e:

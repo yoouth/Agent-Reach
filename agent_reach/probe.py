@@ -9,7 +9,8 @@ Distinguishes the three failure modes that look identical to shutil.which():
     pointing at the shim itself)
   - timeout/error: command runs but misbehaves
 
-Channels use probe_command() inside check() so doctor reports real health,
+Channels use probe_command() inside check() — and inside the opt-in
+probe_check() hook (doctor --probe) — so doctor reports real health,
 not just file existence.
 """
 
