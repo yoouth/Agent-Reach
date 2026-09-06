@@ -242,15 +242,36 @@ def _public_https_url(url: str) -> str:
     return normalized
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Redirects are never followed: the validated host must be the host that answers (a public host redirecting to a
+    private address would otherwise bypass _https_url / _public_https_url)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        target = (urlsplit(str(newurl)).hostname or "?").lower()
+        raise ReadError(
+            "invalid_input",
+            f"HTTP {code} redirect to {target} refused: redirects are not followed; "
+            "re-run with the redirect target only if it is an allowed public https URL",
+        )
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect())
+
+
+def _open(request: urllib.request.Request, timeout: float):
+    """The single HTTP seam for the read operations (tests patch this)."""
+    return _OPENER.open(request, timeout=timeout)
+
+
 def _http_get(url: str, timeout: float, accept: str) -> tuple:
-    """GET *url* with no credentials; return (body bytes, headers)."""
+    """GET *url* with no credentials and no redirect following; return (body bytes, headers)."""
     request = urllib.request.Request(
         url,
         headers={"Accept": accept, "User-Agent": _USER_AGENT},
         method="GET",
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with _open(request, timeout=timeout) as response:
             return response.read(_MAX_BODY_BYTES), response.headers
     except urllib.error.HTTPError as exc:
         _raise_http_error(exc)

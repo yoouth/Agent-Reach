@@ -18,6 +18,8 @@ All notable changes to this project will be documented in this file.
 - **Gaps are distinct from errors.** A missing transcript, a private
   repository, or an exhausted rate-limit budget is reported as an access gap,
   never as an absence of content.
+- **Redirects refused.** The read operations never follow HTTP redirects
+  (SSRF via redirect); a 3xx answer is an `invalid_input` error.
 - **Credential boundary.** GitHub reads use the unauthenticated REST API and
   never send `GH_TOKEN` / `GITHUB_TOKEN`; yt-dlp runs with a scrubbed
   environment; feeds must be https on a publicly resolving host. Nothing in

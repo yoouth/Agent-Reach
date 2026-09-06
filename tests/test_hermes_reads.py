@@ -57,7 +57,7 @@ def fake_http(monkeypatch):
                 return response
         raise AssertionError(f"unexpected request: {request.full_url}")
 
-    monkeypatch.setattr(reads.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(reads, "_open", lambda request, timeout=None: urlopen(request, timeout=timeout))   # the one HTTP seam (redirects refused inside it)
     return {"calls": calls, "routes": routes}
 
 
@@ -724,3 +724,26 @@ class TestMaintenanceBoundary:
 
         for forbidden in ("pip install", "uv tool", "brew ", "gh auth"):
             assert forbidden not in source, forbidden
+
+
+
+def test_http_redirects_are_refused_before_any_second_request(monkeypatch):
+    """A public host that redirects to a private or foreign address must not be followed (SSRF via redirect)."""
+    handler = reads._NoRedirect()
+    with pytest.raises(reads.ReadError) as info:
+        handler.redirect_request(None, None, 302, "Found", {}, "https://169.254.169.254/latest/meta-data")
+    assert info.value.error_type == "invalid_input"
+    assert "169.254.169.254" in str(info.value)
+    assert "not followed" in str(info.value)
+
+    calls = []
+
+    def opener_open(request, timeout=None):
+        calls.append(request.full_url)
+        raise reads.ReadError("invalid_input", "HTTP 301 redirect to evil.example refused: redirects are not followed")
+
+    monkeypatch.setattr(reads._OPENER, "open", opener_open)
+    with pytest.raises(reads.ReadError) as info:
+        reads._http_get("https://api.github.com/repos/x/y", timeout=5, accept="application/json")
+    assert info.value.error_type == "invalid_input"
+    assert calls == ["https://api.github.com/repos/x/y"]

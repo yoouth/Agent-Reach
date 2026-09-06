@@ -76,6 +76,9 @@ the Hermes research plugin, not in this tool.
   `GITHUB_TOKEN`, is dropped from the child process.
 - Hosts are allowlisted per operation. Feeds must be https and must resolve to
   a public address; loopback, private, and link-local targets are refused.
+- HTTP redirects are never followed: a 3xx answer is an `invalid_input`
+  error naming the redirect host, so a public host cannot bounce a read to a
+  private address.
 - Output carries no tokens, cookies, or signed URLs.
 
 ## Maintenance boundary
