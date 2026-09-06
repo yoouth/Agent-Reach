@@ -6,6 +6,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+### ✨ Hermes edition / Hermes 版本
+
+- **`agent-reach read <op> --json`** — typed, cookie-free public reads for the
+  Hermes research plugin: `github_repo`, `github_issue`, `github_readme`,
+  `rss_feed`, `youtube_transcript`, and `status`. One JSON envelope per call
+  (`ok` / `backend` / `checked_at` / `environment` / `elapsed_ms` / `data` /
+  `error` / `gap`), exit `0` when `ok`, `1` otherwise.
+- **Gaps are distinct from errors.** A missing transcript, a private
+  repository, or an exhausted rate-limit budget is reported as an access gap,
+  never as an absence of content.
+- **Credential boundary.** GitHub reads use the unauthenticated REST API and
+  never send `GH_TOKEN` / `GITHUB_TOKEN`; yt-dlp runs with a scrubbed
+  environment; feeds must be https on a publicly resolving host. Nothing in
+  this surface installs, upgrades, logs in, or acquires cookies — a missing
+  backend is reported, never repaired at runtime.
+- **Skill** `agent-reach-hermes` (`agent_reach/skill/hermes/`) documents the
+  platform-access contract for agents. See `docs/hermes.md`.
+
+---
+
 ## [1.3.1] - 2026-03-27
 
 ### 🐛 Bug Fixes / 修复

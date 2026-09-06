@@ -59,6 +59,9 @@ def _configure_logging(verbose: bool = False):
 def main():
     _ensure_utf8_console()
 
+    from agent_reach.hermes.reads import DEFAULT_TIMEOUT as READ_TIMEOUT
+    from agent_reach.hermes.reads import OPERATIONS as READ_OPERATIONS
+
     parser = argparse.ArgumentParser(
         prog="agent-reach",
         description="Give your AI Agent eyes to see the entire internet",
@@ -134,6 +137,27 @@ def main():
     p_doctor.add_argument("--probe", action="store_true",
                           help="Additionally run real remote verification for channels "
                                "that support it (may take ~30s; makes live API calls)")
+
+    # ── read ──
+    p_read = sub.add_parser(
+        "read",
+        help="Typed public read operations for the Hermes research plugin (JSON only)",
+    )
+    p_read.add_argument("op", choices=list(READ_OPERATIONS),
+                        help="Read operation to run")
+    p_read.add_argument("--json", action="store_true",
+                        help="Emit JSON (default and only output format)")
+    p_read.add_argument("--repo", help="owner/name (github_* operations)")
+    p_read.add_argument("--number", help="Issue number (github_issue)")
+    p_read.add_argument("--comments", type=int, default=30,
+                        help="Comments to fetch, max 100 (github_issue, default: 30)")
+    p_read.add_argument("--ref", help="Git ref (github_readme)")
+    p_read.add_argument("--url", help="Feed or video URL (rss_feed, youtube_transcript)")
+    p_read.add_argument("--limit", type=int, default=50,
+                        help="Entries to return, max 200 (rss_feed, default: 50)")
+    p_read.add_argument("--lang", help="Preferred subtitle language (youtube_transcript)")
+    p_read.add_argument("--timeout", type=float, default=READ_TIMEOUT,
+                        help=f"Per-request timeout in seconds (default: {READ_TIMEOUT})")
 
     # ── uninstall ──
     p_uninstall = sub.add_parser("uninstall", help="Remove all Agent Reach config, tokens, and skill files")
@@ -231,6 +255,8 @@ def main():
 
     if args.command == "doctor":
         _cmd_doctor(args)
+    elif args.command == "read":
+        _cmd_read(args)
     elif args.command == "check-update":
         _cmd_check_update()
     elif args.command == "watch":
@@ -2005,6 +2031,25 @@ def _cmd_doctor(args=None):
         print(report)
     else:
         rich_print(report)
+
+
+def _cmd_read(args):
+    """Run one Hermes read operation and print its JSON envelope."""
+    from agent_reach.hermes.reads import run
+
+    result = run(
+        args.op,
+        repo=args.repo,
+        number=args.number,
+        comments=args.comments,
+        ref=args.ref,
+        url=args.url,
+        limit=args.limit,
+        lang=args.lang,
+        timeout=args.timeout,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    sys.exit(0 if result["ok"] else 1)
 
 
 def _cmd_setup():
