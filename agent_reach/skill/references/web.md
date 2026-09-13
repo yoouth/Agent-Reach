@@ -7,16 +7,18 @@
 配置好即为网页读取首选（见 guides/setup-firecrawl.md；完整工具索引见
 [firecrawl.md](firecrawl.md)）：
 
+```python
+from agent_reach.channels.firecrawl import sdk_client
+app = sdk_client()
+app.scrape("https://example.com", formats=["markdown"])
+app.map("https://example.com", limit=50)
+app.crawl("https://example.com/docs", limit=10)
+```
+
 ```bash
-# 单页抓取（markdown）
+# MCP 兜底
 mcporter call firecrawl.firecrawl_scrape url="https://example.com" formats='["markdown"]'
-
-# 结构化提取（JSON schema）
-mcporter call firecrawl.firecrawl_scrape url="https://example.com" formats='["json"]' jsonOptions='{"schema":{...}}'
-
-# 站点 URL 发现 / 小范围爬取
 mcporter call firecrawl.firecrawl_map url="https://example.com" limit=50
-mcporter call firecrawl.firecrawl_crawl url="https://example.com/docs" limit=10
 ```
 
 ## 通用网页 (Jina Reader)

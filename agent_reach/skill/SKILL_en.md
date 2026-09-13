@@ -73,13 +73,15 @@ mcporter call exa.web_search_exa query="query" numResults=5
 # Read any web page (default/fallback when Firecrawl is not configured)
 curl -s "https://r.jina.ai/URL"
 
-# Firecrawl (free key required, see guides/setup-firecrawl.md): preferred web reader once configured
+# Firecrawl (API key required, see guides/setup-firecrawl.md): preferred web reader once configured
+# Python SDK (preferred):
+#   from agent_reach.channels.firecrawl import sdk_client
+#   app = sdk_client(); app.search("query", limit=5); app.scrape("URL", formats=["markdown"])
+# MCP fallback:
 mcporter call firecrawl.firecrawl_search query="query" limit=5
 mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
-mcporter call firecrawl.firecrawl_developer_search query="error message or API usage"
-mcporter call firecrawl.firecrawl_scrape url="URL" formats='["json"]' jsonOptions='{"schema":{...}}'  # structured extraction
-# Web-read chain: firecrawl_scrape → Playwright → Jina (full 27-tool index: references/firecrawl.md)
-# Verify the chain live: agent-reach doctor --probe (zero-credit real call)
+# Web-read chain: Firecrawl SDK/scrape → Playwright → Jina (full SDK surface: references/firecrawl.md)
+# Verify live: agent-reach doctor --probe (SDK get_concurrency / MCP monitor_list)
 
 # GitHub search
 gh search repos "query" --sort stars --limit 10

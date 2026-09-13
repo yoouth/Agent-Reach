@@ -8,6 +8,16 @@ import subprocess
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _isolate_sdk(monkeypatch):
+    """MCP-only tests must not see a real firecrawl-py or a leftover key."""
+    monkeypatch.setattr(
+        "agent_reach.channels.firecrawl.import_sdk", lambda: None
+    )
+    monkeypatch.delenv("FIRECRAWL_AGENT_REACH_API_KEY", raising=False)
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+
+
 class TestFirecrawlChannel:
     def test_mcporter_missing_reports_off(self, monkeypatch):
         monkeypatch.setattr(shutil, "which", lambda _: None)
@@ -17,6 +27,7 @@ class TestFirecrawlChannel:
         status, msg = ch.check()
         assert status == "off"
         assert ch.active_backend is None
+        assert "firecrawl-py" in msg
         assert "npm install -g mcporter" in msg
         assert "mcporter config add firecrawl --command npx" in msg
         assert "firecrawl-mcp@3.24.0" in msg  # pinned, matching the guide
@@ -327,5 +338,138 @@ class TestFirecrawlChannel:
         ch = FirecrawlChannel()
         assert ch.name == "firecrawl"
         assert ch.description == "网页抓取与搜索（JS 渲染、反爬、结构化提取）"
-        assert ch.backends == ["Firecrawl via mcporter"]
+        assert ch.backends[0] == "Firecrawl Python SDK"
+        assert "Firecrawl via mcporter" in ch.backends
         assert ch.tier == 1
+
+
+class _FakeFirecrawl:
+    def __init__(self, api_key=None, **_kwargs):
+        self.api_key = api_key
+        self.concurrency_calls = 0
+
+    def get_concurrency(self):
+        self.concurrency_calls += 1
+        return {"concurrency": 0, "max_concurrency": 50}
+
+
+class TestFirecrawlPythonSdk:
+    def test_sdk_with_key_is_preferred_warn(self, monkeypatch, tmp_path):
+        from agent_reach.channels import firecrawl as fc_mod
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(fc_mod, "import_sdk", lambda: _FakeFirecrawl)
+        monkeypatch.setenv("FIRECRAWL_AGENT_REACH_API_KEY", "fc-sdk-secret-key")
+        monkeypatch.setattr(shutil, "which", lambda _: None)
+        ch = fc_mod.FirecrawlChannel()
+        status, msg = ch.check()
+        assert status == "warn"
+        assert "Python SDK" in msg
+        assert "fc-sdk-secret-key" not in msg
+        assert ch.active_backend is None
+
+    def test_sdk_client_prefers_agent_reach_key(self, monkeypatch):
+        from agent_reach.channels import firecrawl as fc_mod
+
+        created = {}
+
+        class Tracking(_FakeFirecrawl):
+            def __init__(self, api_key=None, **kwargs):
+                super().__init__(api_key=api_key, **kwargs)
+                created["key"] = api_key
+
+        monkeypatch.setattr(fc_mod, "import_sdk", lambda: Tracking)
+        monkeypatch.setenv("FIRECRAWL_AGENT_REACH_API_KEY", "fc-agent-reach-key")
+        monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-generic-key")
+        client = fc_mod.sdk_client()
+        assert created["key"] == "fc-agent-reach-key"
+        assert client.api_key == "fc-agent-reach-key"
+
+    def test_sdk_probe_success_sets_sdk_backend(self, monkeypatch, tmp_path):
+        from agent_reach.channels import firecrawl as fc_mod
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(fc_mod, "import_sdk", lambda: _FakeFirecrawl)
+        monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-probe-key")
+        ch = fc_mod.FirecrawlChannel()
+        status, msg = ch.check()
+        status, msg = ch.probe_check(None, status, msg)
+        assert status == "ok"
+        assert ch.active_backend == fc_mod.SDK_BACKEND
+        assert "get_concurrency" in msg
+        assert "fc-probe-key" not in msg
+
+    def test_sdk_probe_401_scrubs_key(self, monkeypatch, tmp_path):
+        from agent_reach.channels import firecrawl as fc_mod
+
+        class Boom(_FakeFirecrawl):
+            def get_concurrency(self):
+                raise RuntimeError("Unauthorized: Invalid token fc-boomSECRET99")
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(fc_mod, "import_sdk", lambda: Boom)
+        monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-boomSECRET99")
+        monkeypatch.setattr(shutil, "which", lambda _: None)
+        ch = fc_mod.FirecrawlChannel()
+        status, msg = ch.check()
+        status, msg = ch.probe_check(None, status, msg)
+        assert status == "error"
+        assert "401" in msg
+        assert "fc-boomSECRET99" not in msg
+        assert ch.active_backend is None
+
+    def test_sdk_probe_failure_falls_back_to_mcporter(self, monkeypatch, tmp_path):
+        from agent_reach import probe as probe_mod
+        from agent_reach.channels import firecrawl as fc_mod
+
+        class Boom(_FakeFirecrawl):
+            def get_concurrency(self):
+                raise RuntimeError("network down")
+
+        config_path = tmp_path / "config" / "mcporter.json"
+        config_path.parent.mkdir()
+        config_path.write_text(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "firecrawl": {
+                            "command": "npx",
+                            "args": ["-y", "firecrawl-mcp"],
+                        }
+                    },
+                    "imports": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(fc_mod, "import_sdk", lambda: Boom)
+        monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-fallback-key")
+        monkeypatch.setattr(shutil, "which", lambda _: "/usr/local/bin/mcporter")
+        monkeypatch.setattr(
+            fc_mod,
+            "probe_command",
+            lambda *_a, **_k: probe_mod.ProbeResult(
+                "ok", output='{"success":true,"data":[]}'
+            ),
+        )
+        ch = fc_mod.FirecrawlChannel()
+        status, msg = ch.check()
+        status, msg = ch.probe_check(None, status, msg)
+        assert status == "ok"
+        assert ch.active_backend == fc_mod.MCP_BACKEND
+
+    def test_sdk_methods_are_documented(self):
+        from pathlib import Path
+
+        from agent_reach.channels.firecrawl import SDK_METHODS
+
+        docs = (
+            Path(__file__).resolve().parents[1]
+            / "agent_reach"
+            / "skill"
+            / "references"
+            / "firecrawl.md"
+        ).read_text(encoding="utf-8")
+        missing = [name for name in SDK_METHODS if name not in docs]
+        assert missing == []

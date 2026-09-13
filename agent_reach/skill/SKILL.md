@@ -67,13 +67,15 @@ mcporter call exa.web_search_exa query="query" numResults=5
 # 通用网页阅读（Firecrawl 未配置时的默认/兜底）
 curl -s "https://r.jina.ai/URL"
 
-# Firecrawl（需免费 Key，见 guides/setup-firecrawl.md）：配置好即为网页读取首选
+# Firecrawl（需 Key，见 guides/setup-firecrawl.md）：配置好即为网页读取首选
+# Python SDK（首选）:
+#   from agent_reach.channels.firecrawl import sdk_client
+#   app = sdk_client(); app.search("query", limit=5); app.scrape("URL", formats=["markdown"])
+# MCP 兜底:
 mcporter call firecrawl.firecrawl_search query="query" limit=5
 mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
-mcporter call firecrawl.firecrawl_developer_search query="报错信息或 API 用法"
-mcporter call firecrawl.firecrawl_scrape url="URL" formats='["json"]' jsonOptions='{"schema":{...}}'  # 结构化提取
-# 网页读取链：firecrawl_scrape → Playwright → Jina（完整 27 工具索引见 references/firecrawl.md）
-# 链路验活：agent-reach doctor --probe（零消耗真实调用）
+# 网页读取链：Firecrawl SDK/scrape → Playwright → Jina（完整 SDK 面见 references/firecrawl.md）
+# 链路验活：agent-reach doctor --probe（SDK get_concurrency / MCP monitor_list）
 
 # GitHub 搜索
 gh search repos "query" --sort stars --limit 10

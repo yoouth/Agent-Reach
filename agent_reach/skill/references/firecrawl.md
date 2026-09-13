@@ -1,52 +1,106 @@
 # Firecrawl 工具索引
 
-Firecrawl MCP（经 mcporter）暴露约 27 个工具。本页是索引：常用命令
-优先掌握，其余按家族了解即可。限额按**团队**计算（并发浏览器数 + 每分钟
-请求数），多客户端共用同一 Key 会互相挤占——不是按 Key 隔离。
+首选 **官方 Python SDK**（`firecrawl-py` ≥ 4.42）。MCP（经 mcporter）是兜底。
+限额按**团队**计算（并发浏览器数 + 每分钟请求数），多客户端共用同一 Key
+会互相挤占——不是按 Key 隔离。
 
-前置：guides/setup-firecrawl.md（免费 Key + mcporter 配置与版本锁定）。
-链路验活：`agent-reach doctor --probe`（真实调用一次零消耗的
-firecrawl_monitor_list）。工具清单以 `mcporter list firecrawl` 实时输出为准。
+前置：guides/setup-firecrawl.md。
+链路验活：`agent-reach doctor --probe`
+（SDK：`get_concurrency`；MCP：`firecrawl_monitor_list`，都是零积分）。
 
-## 常用命令
-
-```bash
-# 单页抓取（markdown/json/screenshot 等格式；maxAge=0 强制实时抓取）
-mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
-
-# 结构化提取：scrape + JSON schema（firecrawl_extract 在 MCP 已弃用，勿用）
-mcporter call firecrawl.firecrawl_scrape url="URL" formats='["json"]' jsonOptions='{"schema":{...}}'
-
-# 搜索（网页/新闻/图片；categories 支持 github/research/pdf/developer）
-mcporter call firecrawl.firecrawl_search query="query" limit=5
-
-# 面向编码 Agent 的开发者搜索（GitHub issues/合并 PR/README/精选文档索引）
-mcporter call firecrawl.firecrawl_developer_search query="报错信息或 API 用法"
-
-# 站点 URL 清单（不抓正文，定位入口页用）
-mcporter call firecrawl.firecrawl_map url="https://example.com" search="docs"
-
-# 多页爬取（阻塞轮询到终态才返回，可能数分钟；耗额度大，先 map 估量再 crawl）
-mcporter call firecrawl.firecrawl_crawl url="https://example.com/docs" limit=10
-mcporter call firecrawl.firecrawl_check_crawl_status id="JOB_ID"
-
-# 本地文档解析（PDF/Word/Excel 文件 → markdown；网络 URL 用 firecrawl_scrape）
-mcporter call firecrawl.firecrawl_parse filePath="/path/to/paper.pdf"
+```python
+from agent_reach.channels.firecrawl import sdk_client
+app = sdk_client()  # FIRECRAWL_AGENT_REACH_API_KEY，否则 FIRECRAWL_API_KEY
 ```
 
-## 其余家族（一句话索引）
+## Python SDK（首选，firecrawl-py v2）
 
-| 家族 | 工具 | 用途 |
-|------|------|------|
-| research_* | search_papers / inspect_paper / related_papers / read_paper / search_github | 学术文献检索（PubMed/bioRxiv/medRxiv/arXiv 摘要与全文） |
-| monitor_* | create / list / get / update / run / delete / checks / check | 页面变更监控（定时快照+对比；monitor_list 零消耗，doctor --probe 用它验活） |
-| agent | firecrawl_agent / firecrawl_agent_status | 自主浏览 Agent（额度大，明确需要再用） |
-| interact | firecrawl_interact / firecrawl_interact_stop | 会话式页面交互（点击/填表，会改变页面状态，谨慎） |
-| feedback | firecrawl_search_feedback / firecrawl_feedback | 搜索质量反馈（合格首评可返 1 积分，团队每日有上限） |
+```python
+# 单页 scrape（markdown / html / json schema / screenshot）
+doc = app.scrape("https://example.com", formats=["markdown"])
+print(doc.markdown)
+
+# 结构化提取：scrape formats=["json"] 或 extract()
+doc = app.scrape("https://example.com", formats=["json"], json_options={"schema": {...}})
+job = app.extract(urls=["https://example.com"], schema={...})
+app.start_extract(...)
+app.get_extract_status(job_id)
+
+# parse 本地文件（PDF/Word/Excel → markdown）
+parsed = app.parse("/path/to/paper.pdf")
+
+# search / developer_search
+app.search("query", limit=5)
+app.developer_search("error message or API usage")
+
+# map 站点 URL（不抓正文）再 crawl
+app.map("https://example.com", limit=50)
+app.crawl("https://example.com/docs", limit=10)          # 阻塞等到终态
+job = app.start_crawl("https://example.com/docs", limit=10)
+app.get_crawl_status(job.id)
+app.cancel_crawl(job.id)
+
+# batch_scrape
+app.batch_scrape(["https://a.example", "https://b.example"], formats=["markdown"])
+job = app.start_batch_scrape([...])
+app.get_batch_scrape_status(job.id)
+app.cancel_batch_scrape(job.id)
+
+# agent
+app.agent(prompt="Find the founders of Stripe")
+job = app.start_agent(prompt="...")
+app.get_agent_status(job.id)
+app.cancel_agent(job.id)
+
+# interact（用完必须 stop_interaction，否则占团队并发）
+doc = app.scrape("https://example.com", formats=["markdown"])
+app.interact(doc.metadata.scrape_id, prompt="点击「更多」")
+app.stop_interaction(doc.metadata.scrape_id)
+
+# browser 云端会话
+session = app.browser()
+app.browser_execute(session.id, code='print(await page.title())', language="python")
+app.list_browsers(status="active")
+app.delete_browser(session.id)
+
+# monitors
+app.list_monitors()
+app.create_monitor(...)
+
+# 零积分用量 / 队列（doctor --probe 用 get_concurrency）
+app.get_concurrency()
+app.get_credit_usage()
+app.get_queue_status()
+
+# 文献索引
+app.search_papers("query")
+app.inspect_paper(paper_id)
+app.read_paper(paper_id, query="...")
+app.related_papers(paper_id, intent="...")
+app.search_github("query")  # 2026-11-03 后上游将停
+```
+
+`AsyncFirecrawl` 方法名与上表对齐，全部 `await`。v1 冻结面在 `app.v1`。
+
+## MCP 兜底（mcporter）
+
+SDK 不可用时再用。工具清单以 `mcporter list firecrawl` 为准。
+
+```bash
+mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
+mcporter call firecrawl.firecrawl_search query="query" limit=5
+mcporter call firecrawl.firecrawl_map url="https://example.com" search="docs"
+mcporter call firecrawl.firecrawl_crawl url="https://example.com/docs" limit=10
+mcporter call firecrawl.firecrawl_parse filePath="/path/to/paper.pdf"
+mcporter call firecrawl.firecrawl_interact url="URL" prompt="点击「更多」"
+mcporter call firecrawl.firecrawl_interact_stop scrapeId="SCRAPE_ID"
+mcporter call firecrawl.firecrawl_developer_search query="报错信息或 API 用法"
+```
 
 ## 成本要点
 
-- scrape ≈ 1 积分/页；crawl / agent 按页数放大——先 map 再 crawl。
-- firecrawl_extract 在 MCP 端已弃用（必然失败）；提取用 scrape 的 json 格式。
-- 免费档并发 2 个浏览器；402/429 表示额度或并发受限（团队级）。
-- 结果可能来自缓存复用窗口；需要实时数据用 `maxAge: 0`。
+- scrape ≈ 1 积分/页；crawl / agent / batch_scrape 按页数放大——先 map 再 crawl。
+- MCP 的 firecrawl_extract 已弃用；提取用 scrape json 或 SDK `extract()`。
+- 并发按**账户套餐、团队级**计算。`crawl` 的 max_concurrency 按本次任务份额设，不要填账户上限；大批量前 `get_queue_status()`。
+- 结果可能来自缓存；需要实时数据用 `max_age=0`。
+- 用完浏览器会话：`stop_interaction` / `delete_browser`。

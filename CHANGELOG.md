@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 🔥 Firecrawl Python SDK / 官方 Python SDK
+
+- **Preferred backend is `firecrawl-py` ≥ 4.42** (`sdk_client()`), with mcporter MCP as fallback. Doctor `--probe` uses zero-credit `get_concurrency()` on the SDK, then `firecrawl_monitor_list` on MCP.
+- Optional extra `firecrawl` pins `firecrawl-py>=4.42.0,<5`. Key order: `FIRECRAWL_AGENT_REACH_API_KEY` then `FIRECRAWL_API_KEY` (values never logged).
+- Skill `references/firecrawl.md` indexes the full v2 SDK surface (scrape/parse/search/map/crawl/batch/extract/agent/interact/browser/monitors/usage/research).
+- 首选官方 Python SDK；MCP 仅作兜底。探测走零积分 `get_concurrency()`。
+
 ### ✨ Hermes edition / Hermes 版本
 
 - **`agent-reach read <op> --json`** — typed, cookie-free public reads for the
