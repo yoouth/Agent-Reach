@@ -37,6 +37,10 @@ class Channel(ABC):
     #: Backend currently serving this channel; set by check(), None = unavailable.
     active_backend: Optional[str] = None
 
+    # Optional hook: probe_check(config, status, message) -> (status, message).
+    # Implement it to support `doctor --probe` (real remote verification);
+    # doctor calls it via hasattr, default doctor runs never do.
+
     @abstractmethod
     def can_handle(self, url: str) -> bool:
         """Check if this channel can handle this URL."""

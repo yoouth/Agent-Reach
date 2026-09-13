@@ -6,6 +6,37 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+### 🔥 Firecrawl Python SDK / 官方 Python SDK
+
+- **Preferred backend is `firecrawl-py` ≥ 4.42** (`sdk_client()`), with mcporter MCP as fallback. Doctor `--probe` uses zero-credit `get_concurrency()` on the SDK, then `firecrawl_monitor_list` on MCP.
+- Optional extra `firecrawl` pins `firecrawl-py>=4.42.0,<5`. Key order: `FIRECRAWL_AGENT_REACH_API_KEY` then `FIRECRAWL_API_KEY` (values never logged).
+- Skill `references/firecrawl.md` indexes the full v2 SDK surface (scrape/parse/search/map/crawl/batch/extract/agent/interact/browser/monitors/usage/research).
+- 首选官方 Python SDK；MCP 仅作兜底。探测走零积分 `get_concurrency()`。
+
+### ✨ Hermes edition / Hermes 版本
+
+- **`agent-reach read <op> --json`** — typed, cookie-free public reads for the
+  Hermes research plugin: `github_repo`, `github_issue`, `github_readme`,
+  `rss_feed`, `youtube_transcript`, and `status`. One JSON envelope per call
+  (`ok` / `backend` / `checked_at` / `environment` / `elapsed_ms` / `data` /
+  `error` / `gap`), exit `0` when `ok`, `1` otherwise.
+- **Gaps are distinct from errors.** A missing transcript, a private
+  repository, or an exhausted rate-limit budget is reported as an access gap,
+  never as an absence of content.
+- **Redirects refused.** The read operations never follow HTTP redirects
+  (SSRF via redirect); a 3xx answer is an `invalid_input` error.
+- **Credential boundary.** GitHub reads use the unauthenticated REST API and
+  never send `GH_TOKEN` / `GITHUB_TOKEN`; yt-dlp runs with a scrubbed
+  environment; feeds must be https on a publicly resolving host. Nothing in
+  this surface installs, upgrades, logs in, or acquires cookies — a missing
+  backend is reported, never repaired at runtime.
+- **Skill** `agent-reach-hermes` (`agent_reach/skill/hermes/`) documents the
+  platform-access contract for agents. See `docs/hermes.md`.
+
+---
+
 ## [1.3.1] - 2026-03-27
 
 ### 🐛 Bug Fixes / 修复

@@ -59,6 +59,9 @@ def _configure_logging(verbose: bool = False):
 def main():
     _ensure_utf8_console()
 
+    from agent_reach.hermes.reads import DEFAULT_TIMEOUT as READ_TIMEOUT
+    from agent_reach.hermes.reads import OPERATIONS as READ_OPERATIONS
+
     parser = argparse.ArgumentParser(
         prog="agent-reach",
         description="Give your AI Agent eyes to see the entire internet",
@@ -131,6 +134,30 @@ def main():
     p_doctor = sub.add_parser("doctor", help="Check platform availability")
     p_doctor.add_argument("--json", action="store_true",
                           help="Output machine-readable JSON instead of the text report")
+    p_doctor.add_argument("--probe", action="store_true",
+                          help="Additionally run real remote verification for channels "
+                               "that support it (may take ~30s; makes live API calls)")
+
+    # ── read ──
+    p_read = sub.add_parser(
+        "read",
+        help="Typed public read operations for the Hermes research plugin (JSON only)",
+    )
+    p_read.add_argument("op", choices=list(READ_OPERATIONS),
+                        help="Read operation to run")
+    p_read.add_argument("--json", action="store_true",
+                        help="Emit JSON (default and only output format)")
+    p_read.add_argument("--repo", help="owner/name (github_* operations)")
+    p_read.add_argument("--number", help="Issue number (github_issue)")
+    p_read.add_argument("--comments", type=int, default=30,
+                        help="Comments to fetch, max 100 (github_issue, default: 30)")
+    p_read.add_argument("--ref", help="Git ref (github_readme)")
+    p_read.add_argument("--url", help="Feed or video URL (rss_feed, youtube_transcript)")
+    p_read.add_argument("--limit", type=int, default=50,
+                        help="Entries to return, max 200 (rss_feed, default: 50)")
+    p_read.add_argument("--lang", help="Preferred subtitle language (youtube_transcript)")
+    p_read.add_argument("--timeout", type=float, default=READ_TIMEOUT,
+                        help=f"Per-request timeout in seconds (default: {READ_TIMEOUT})")
 
     # ── uninstall ──
     p_uninstall = sub.add_parser("uninstall", help="Remove all Agent Reach config, tokens, and skill files")
@@ -228,6 +255,8 @@ def main():
 
     if args.command == "doctor":
         _cmd_doctor(args)
+    elif args.command == "read":
+        _cmd_read(args)
     elif args.command == "check-update":
         _cmd_check_update()
     elif args.command == "watch":
@@ -457,7 +486,7 @@ def _cmd_install(args):
             # Star reminder
             print()
             print("如果 Agent Reach 帮到了你，给个 Star 让更多人发现它吧：")
-            print("   https://github.com/Panniantong/Agent-Reach")
+            print("   https://github.com/yoouth/Agent-Reach")
             print("   只需一秒，对独立开发者意义很大。谢谢！")
             if not install_ok:
                 raise SystemExit(1)
@@ -521,17 +550,33 @@ def _install_skill(force: bool = True):
             with open(os.path.join(target, "SKILL.md"), "w", encoding="utf-8") as f:
                 f.write(skill_md)
 
-            # Copy references/ directory
-            refs_pkg = skill_pkg.joinpath("references")
-            refs_target = os.path.join(target, "references")
-            os.makedirs(refs_target, exist_ok=True)
+            def _copy_md_dir(src_pkg, sub: str, required: bool = True) -> None:
+                """Copy every .md in src_pkg into <target>/<sub>.
 
-            for ref_file in refs_pkg.iterdir():
-                name = ref_file.name if hasattr(ref_file, 'name') else str(ref_file).split('/')[-1]
-                if name.endswith(".md"):
-                    content = ref_file.read_text(encoding="utf-8") if hasattr(ref_file, 'read_text') else ref_file.read_text()
-                    with open(os.path.join(refs_target, name), "w", encoding="utf-8") as f:
-                        f.write(content)
+                required=False keeps an optional directory (guides/) from
+                failing the whole skill install after SKILL.md is written.
+                """
+                try:
+                    sub_target = os.path.join(target, sub)
+                    os.makedirs(sub_target, exist_ok=True)
+                    for f_entry in src_pkg.iterdir():
+                        name = getattr(f_entry, "name", str(f_entry).rsplit("/", 1)[-1])
+                        if name.endswith(".md"):
+                            with open(os.path.join(sub_target, name), "w", encoding="utf-8") as out:
+                                out.write(f_entry.read_text(encoding="utf-8"))
+                except Exception:
+                    if required:
+                        raise
+
+            # Copy references/, and guides/ so skill-doc links
+            # (guides/setup-*.md) resolve in installed skills too.
+            try:
+                pkg_root = importlib.resources.files("agent_reach")
+            except Exception:
+                from pathlib import Path
+                pkg_root = Path(__file__).resolve().parent
+            _copy_md_dir(skill_pkg.joinpath("references"), "references")
+            _copy_md_dir(pkg_root.joinpath("guides"), "guides", required=False)
 
             return "installed"
         except Exception as e:
@@ -1973,7 +2018,7 @@ def _cmd_doctor(args=None):
     from agent_reach.config import Config
     from agent_reach.doctor import check_all, format_report
     config = Config(read_only=True)
-    results = check_all(config)
+    results = check_all(config, probe=bool(args is not None and getattr(args, "probe", False)))
 
     if args is not None and getattr(args, "json", False):
         print(json.dumps(results, ensure_ascii=False, indent=2))
@@ -1986,6 +2031,25 @@ def _cmd_doctor(args=None):
         print(report)
     else:
         rich_print(report)
+
+
+def _cmd_read(args):
+    """Run one Hermes read operation and print its JSON envelope."""
+    from agent_reach.hermes.reads import run
+
+    result = run(
+        args.op,
+        repo=args.repo,
+        number=args.number,
+        comments=args.comments,
+        ref=args.ref,
+        url=args.url,
+        limit=args.limit,
+        lang=args.lang,
+        timeout=args.timeout,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    sys.exit(0 if result["ok"] else 1)
 
 
 def _cmd_setup():
@@ -2194,9 +2258,9 @@ def _github_get_with_retry(url, timeout=10, retries=3, sleeper=time.sleep):
 #: agent through all three (docs/update.md); bare pip only updates the package.
 _UPDATE_INSTRUCTIONS = (
     "更新方式（推荐，复制这句话给你的 AI Agent，会完整更新本体+上游工具+skill）：\n"
-    "  帮我更新 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md\n"
+    "  帮我更新 Agent Reach：https://raw.githubusercontent.com/yoouth/agent-reach/main/docs/update.md\n"
     "仅更新本体（不含上游工具和 skill）：\n"
-    "  pip install --upgrade https://github.com/Panniantong/agent-reach/archive/main.zip"
+    "  pip install --upgrade https://github.com/yoouth/agent-reach/archive/main.zip"
 )
 
 
@@ -2224,8 +2288,8 @@ def _cmd_check_update():
     from agent_reach import __version__
 
     print(f"当前版本: v{__version__}")
-    release_url = "https://api.github.com/repos/Panniantong/Agent-Reach/releases/latest"
-    commit_url = "https://api.github.com/repos/Panniantong/Agent-Reach/commits/main"
+    release_url = "https://api.github.com/repos/yoouth/Agent-Reach/releases/latest"
+    commit_url = "https://api.github.com/repos/yoouth/Agent-Reach/commits/main"
 
     # Fetch latest release with retry/backoff.
     resp, err, attempts = _github_get_with_retry(release_url, timeout=10, retries=3)
@@ -2310,7 +2374,7 @@ def _cmd_watch():
     new_version = ""
     release_body = ""
     resp, err, _attempts = _github_get_with_retry(
-        "https://api.github.com/repos/Panniantong/Agent-Reach/releases/latest",
+        "https://api.github.com/repos/yoouth/Agent-Reach/releases/latest",
         timeout=10,
         retries=2,
     )
@@ -2343,7 +2407,7 @@ def _cmd_watch():
             for line in release_body.strip().split("\n")[:10]:
                 print(f"    {line}")
         print("  更新（一句话发给 Agent 即可完整更新）：")
-        print("    帮我更新 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/update.md")
+        print("    帮我更新 Agent Reach：https://raw.githubusercontent.com/yoouth/agent-reach/main/docs/update.md")
 
 
 if __name__ == "__main__":

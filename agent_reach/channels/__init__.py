@@ -10,9 +10,11 @@ from .base import Channel
 from .bilibili import BilibiliChannel
 from .exa_search import ExaSearchChannel
 from .facebook import FacebookChannel
+from .firecrawl import FirecrawlChannel
 from .github import GitHubChannel
 from .instagram import InstagramChannel
 from .linkedin import LinkedInChannel
+from .playwright_mcp import PlaywrightMcpChannel
 from .reddit import RedditChannel
 from .rss import RSSChannel
 from .twitter import TwitterChannel
@@ -38,6 +40,8 @@ ALL_CHANNELS: List[Channel] = [
     XueqiuChannel(),
     RSSChannel(),
     ExaSearchChannel(),
+    FirecrawlChannel(),
+    PlaywrightMcpChannel(),
     WebChannel(),
 ]
 
