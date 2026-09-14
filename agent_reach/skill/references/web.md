@@ -13,6 +13,7 @@ app = sdk_client()
 app.scrape("https://example.com", formats=["markdown"])
 app.map("https://example.com", limit=50)
 app.crawl("https://example.com/docs", limit=10)
+# 整站/多页写入 /tmp/agent-reach/，不要把正文倒进对话。意图表见 SKILL.md。
 ```
 
 ```bash

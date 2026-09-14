@@ -3,7 +3,9 @@ name: agent-reach
 description: >
   MUST USE when user wants to research/search/look up/find anything on the
   internet — e.g. "research this topic", "do a deep dive on X", "search the
-  web for X", "see what people say about X", "look this up".
+  web for X", "see what people say about X", "look this up",
+  "crawl this site", "extract pricing", "watch this page", "papers",
+  "map this site".
 
   Also MUST USE when user mentions any platform or shares any URL/link:
   Twitter/X, Reddit, Facebook, Instagram, YouTube, GitHub, Bilibili, XiaoHongShu,
@@ -50,12 +52,18 @@ these platforms — do not invent your own approach.**
    backend to use. If the host restricts collection to one transport (e.g.
    "Firecrawl only"), use only that channel — do not reroute per this skill's
    defaults.
+7. **One Firecrawl door per job:** this skill uses `sdk_client()` (Agent Reach
+   key). If the host already exposes `firecrawl__*` MCP tools, pick one door —
+   do not send the same job down both.
+8. **Firecrawl bulk output to disk:** write under `/tmp/agent-reach/` and cite
+   with head/grep. Do not dump crawl/agent bodies into the chat.
 
 ## Routing table
 
 | User intent | Category | Details |
 |---------|------|---------|
 | Web / code search | search | [references/search.md](references/search.md) |
+| Site-wide / structured extract / papers / monitors / map | firecrawl | [references/firecrawl.md](references/firecrawl.md) |
 | JS-heavy / anti-bot / interactive pages | web/browser | [references/web.md](references/web.md), [references/browser.md](references/browser.md) |
 | XiaoHongShu / Twitter / Bilibili / V2EX / Reddit / Facebook / Instagram | social | [references/social.md](references/social.md) |
 | Jobs / LinkedIn | career | [references/career.md](references/career.md) |
@@ -63,6 +71,33 @@ these platforms — do not invent your own approach.**
 | Web pages / articles / RSS | web | [references/web.md](references/web.md) |
 | YouTube / Bilibili / podcast transcripts | video | [references/video.md](references/video.md) |
 | Xueqiu / stock quotes | finance | [references/finance.md](references/finance.md) |
+
+## Firecrawl (preferred web reader once keyed)
+
+```python
+from agent_reach.channels.firecrawl import sdk_client
+app = sdk_client()
+```
+
+Pick the **narrowest** row. Write large results under `/tmp/agent-reach/` and cite with head/grep.
+**Done when:** that row finished and the answer cites the file. Options/schema/credits: [firecrawl.md](references/firecrawl.md).
+
+| Need | Call |
+|------|------|
+| No URL yet | `app.search` |
+| One known URL | `app.scrape` |
+| Many known URLs | `app.batch_scrape` |
+| What URLs exist on this site | `app.map` then scrape the hits |
+| A whole docs section / site | `app.map` then `app.crawl` |
+| Structured data across a site (pricing, catalog) | `app.agent` (schema, `max_credits`, `model="spark-2"`) |
+| Papers / PubMed / arXiv | `app.search_papers` → `app.read_paper` |
+| Clicks / login / pagination | `app.interact` then `app.stop_interaction` |
+| Alert me when this page changes | `app.create_monitor` |
+| Local PDF/DOCX | `app.parse` |
+| SEO audit | `app.map` + scrape `links`/`metadata` (no `seo()`) |
+
+MCP fallback (SDK unavailable): `mcporter call firecrawl.firecrawl_search` / `firecrawl_scrape`.
+Read chain: Firecrawl → Playwright → Jina. Probe: `agent-reach doctor --probe`.
 
 ## Zero-config quick commands
 
@@ -72,16 +107,6 @@ mcporter call exa.web_search_exa query="query" numResults=5
 
 # Read any web page (default/fallback when Firecrawl is not configured)
 curl -s "https://r.jina.ai/URL"
-
-# Firecrawl (API key required, see guides/setup-firecrawl.md): preferred web reader once configured
-# Python SDK (preferred):
-#   from agent_reach.channels.firecrawl import sdk_client
-#   app = sdk_client(); app.search("query", limit=5); app.scrape("URL", formats=["markdown"])
-# MCP fallback:
-mcporter call firecrawl.firecrawl_search query="query" limit=5
-mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
-# Web-read chain: Firecrawl SDK/scrape → Playwright → Jina (full SDK surface: references/firecrawl.md)
-# Verify live: agent-reach doctor --probe (SDK get_concurrency / MCP monitor_list)
 
 # GitHub search
 gh search repos "query" --sort stars --limit 10
