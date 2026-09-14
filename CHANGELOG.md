@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 - Always-loaded intent table: search / scrape / batch_scrape / map / crawl / agent / search_papers / interact / parse / create_monitor. Live example is `sdk_client()`; MCP is fallback.
 - One door per job; bulk output under `/tmp/agent-reach/`. Agent contract in `references/firecrawl.md` (`spark-2`, `schema`, `max_credits`).
+- MCP fallback commands are fully qualified (`firecrawl.firecrawl_scrape`). Router tests lock table order and installed copies.
 
 ### 🔥 Firecrawl Python SDK / 官方 Python SDK
 
