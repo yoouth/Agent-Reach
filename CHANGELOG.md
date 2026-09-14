@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 🧭 Firecrawl router in SKILL.md
+
+- Always-loaded intent table: search / scrape / batch_scrape / map / crawl / agent / search_papers / interact / parse / create_monitor. Live example is `sdk_client()`; MCP is fallback.
+- One door per job; bulk output under `/tmp/agent-reach/`. Agent contract in `references/firecrawl.md` (`spark-2`, `schema`, `max_credits`).
+
 ### 🔥 Firecrawl Python SDK / 官方 Python SDK
 
 - **Preferred backend is `firecrawl-py` ≥ 4.42** (`sdk_client()`), with mcporter MCP as fallback. Doctor `--probe` uses zero-credit `get_concurrency()` on the SDK, then `firecrawl_monitor_list` on MCP.

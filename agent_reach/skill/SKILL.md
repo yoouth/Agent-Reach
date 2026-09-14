@@ -3,7 +3,8 @@ name: agent-reach
 description: >
   MUST USE when user wants to 调研/research/搜索/search/查/找/look up anything
   on the internet — e.g. 全网调研 X / 帮我调研一下 X / 查一下 X / 搜搜 X /
-  看看大家怎么评价 X / X 上有什么讨论 / research this topic。
+  看看大家怎么评价 X / X 上有什么讨论 / research this topic /
+  crawl a site / 整站抓取 / extract pricing / 监控页面 / papers / map 这个站点。
 
   Also MUST USE when user mentions any platform or shares any URL/链接:
   小红书/xiaohongshu/xhs, Twitter/推特/X, B站/bilibili, Reddit, Facebook,
@@ -18,7 +19,7 @@ description: >
   发帖/评论/点赞等写操作；已有专门 skill 的平台（先用专门 skill）。
 
   【路由方式】SKILL.md 包含路由表和常用命令，复杂场景需按需阅读对应分类的 references/*.md。
-  分类：search / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn) / dev(github) / web(网页/文章/RSS) / browser(浏览器自动化) / video(YouTube/B站/播客) / finance(雪球/股票)。
+  分类：search / firecrawl / social (小红书/推特/B站/V2EX/Reddit/Facebook/Instagram) / career(LinkedIn) / dev(github) / web(网页/文章/RSS) / browser(浏览器自动化) / video(YouTube/B站/播客) / finance(雪球/股票)。
 metadata:
   homepage: https://github.com/yoouth/Agent-Reach
 ---
@@ -44,12 +45,17 @@ metadata:
 6. **宿主约束优先**：宿主 Agent 的守则（SOUL.md / system prompt / 案件简报）对
    后端选择有最终决定权。宿主限定了传输方式（例如「只许 Firecrawl 采集」）时，
    只用该渠道，不要按本 skill 的默认路由换后端。
+7. **Firecrawl 一门一请求**：本 skill 走 `sdk_client()`（Agent Reach Key）。
+   宿主若已有 `firecrawl__*` MCP，同一作业只用其中一门，不要双发。
+8. **Firecrawl 大结果落盘**：写入 `/tmp/agent-reach/`，用 head/grep 引用。
+   不要把 crawl/agent 全文倒进对话。
 
 ## 路由表
 
 | 用户意图 | 分类 | 详细文档 |
 |---------|------|---------|
 | 网页搜索/代码搜索 | search | [references/search.md](references/search.md) |
+| 整站/结构化抽取/论文/监控/map | firecrawl | [references/firecrawl.md](references/firecrawl.md) |
 | JS 渲染/反爬/交互页面 | web/browser | [references/web.md](references/web.md), [references/browser.md](references/browser.md) |
 | 小红书/推特/B站/V2EX/Reddit/Facebook/Instagram | social | [references/social.md](references/social.md) |
 | 招聘/职位/LinkedIn | career | [references/career.md](references/career.md) |
@@ -57,6 +63,33 @@ metadata:
 | 网页/文章/RSS | web | [references/web.md](references/web.md) |
 | YouTube/B站/播客字幕 | video | [references/video.md](references/video.md) |
 | 雪球/股票行情 | finance | [references/finance.md](references/finance.md) |
+
+## Firecrawl（网页首选，配置后）
+
+```python
+from agent_reach.channels.firecrawl import sdk_client
+app = sdk_client()
+```
+
+选**最窄**的一行。大结果写入 `/tmp/agent-reach/`，用 head/grep 引用。
+**Done when:** 该行已跑完，回答引用了该文件。选项/schema/积分见 [firecrawl.md](references/firecrawl.md)。
+
+| 需要 | 调用 |
+|------|------|
+| 还没有 URL | `app.search` |
+| 一个已知 URL | `app.scrape` |
+| 多个已知 URL | `app.batch_scrape` |
+| 这个站点有哪些页 | `app.map` 再 scrape 命中项 |
+| 整段 docs / 整站 | `app.map` 再 `app.crawl` |
+| 跨页结构化（定价、目录） | `app.agent`（schema、`max_credits`、`model="spark-2"`） |
+| 论文 / PubMed / arXiv | `app.search_papers` → `app.read_paper` |
+| 点击 / 登录 / 翻页 | `app.interact` 然后 `app.stop_interaction` |
+| 页面变更通知 | `app.create_monitor` |
+| 本地 PDF/DOCX | `app.parse` |
+| SEO 审计 | `app.map` + scrape `links`/`metadata`（无 `seo()`） |
+
+MCP 兜底（SDK 不可用时）：`mcporter call firecrawl.firecrawl_search` / `firecrawl_scrape`。
+读取链：Firecrawl → Playwright → Jina。验活：`agent-reach doctor --probe`。
 
 ## 零配置快速命令
 
@@ -66,16 +99,6 @@ mcporter call exa.web_search_exa query="query" numResults=5
 
 # 通用网页阅读（Firecrawl 未配置时的默认/兜底）
 curl -s "https://r.jina.ai/URL"
-
-# Firecrawl（需 Key，见 guides/setup-firecrawl.md）：配置好即为网页读取首选
-# Python SDK（首选）:
-#   from agent_reach.channels.firecrawl import sdk_client
-#   app = sdk_client(); app.search("query", limit=5); app.scrape("URL", formats=["markdown"])
-# MCP 兜底:
-mcporter call firecrawl.firecrawl_search query="query" limit=5
-mcporter call firecrawl.firecrawl_scrape url="URL" formats='["markdown"]'
-# 网页读取链：Firecrawl SDK/scrape → Playwright → Jina（完整 SDK 面见 references/firecrawl.md）
-# 链路验活：agent-reach doctor --probe（SDK get_concurrency / MCP monitor_list）
 
 # GitHub 搜索
 gh search repos "query" --sort stars --limit 10

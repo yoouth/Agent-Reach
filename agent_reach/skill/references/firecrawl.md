@@ -13,6 +13,9 @@ from agent_reach.channels.firecrawl import sdk_client
 app = sdk_client()  # FIRECRAWL_AGENT_REACH_API_KEY，否则 FIRECRAWL_API_KEY
 ```
 
+大结果写入 `/tmp/agent-reach/`（json/md），用 head/grep 引用，不要把 crawl/agent 全文塞进对话。
+意图选行见 SKILL.md 的 Firecrawl 表。
+
 ## Python SDK（首选，firecrawl-py v2）
 
 ```python
@@ -46,9 +49,16 @@ job = app.start_batch_scrape([...])
 app.get_batch_scrape_status(job.id)
 app.cancel_batch_scrape(job.id)
 
-# agent
-app.agent(prompt="Find the founders of Stripe")
-job = app.start_agent(prompt="...")
+# agent — 跨页结构化抽取。单页用 scrape，未限定范围的问题不要丢给 agent（会闲逛并烧积分）。
+# 默认模型 spark-2（spark-1-* 已弃用，会映射到 spark-2）。
+result = app.agent(
+    prompt="Extract all pricing tiers",
+    schema={"type": "object", "properties": {"name": {"type": "string"}}},
+    urls=["https://example.com/pricing"],  # 可选；省略则自行发现
+    model="spark-2",
+    max_credits=100,
+)
+job = app.start_agent(prompt="...", schema=..., max_credits=100)
 app.get_agent_status(job.id)
 app.cancel_agent(job.id)
 
