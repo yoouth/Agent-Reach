@@ -88,7 +88,7 @@ app = sdk_client()
 | 本地 PDF/DOCX | `app.parse` |
 | SEO 审计 | `app.map` + scrape `links`/`metadata`（无 `seo()`） |
 
-MCP 兜底（SDK 不可用时）：`mcporter call firecrawl.firecrawl_search` / `firecrawl_scrape`。
+MCP 兜底（SDK 不可用时）：`mcporter call firecrawl.firecrawl_search` / `mcporter call firecrawl.firecrawl_scrape`。
 读取链：Firecrawl → Playwright → Jina。验活：`agent-reach doctor --probe`。
 
 ## 零配置快速命令

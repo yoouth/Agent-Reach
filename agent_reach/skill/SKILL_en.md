@@ -96,7 +96,7 @@ Pick the **narrowest** row. Write large results under `/tmp/agent-reach/` and ci
 | Local PDF/DOCX | `app.parse` |
 | SEO audit | `app.map` + scrape `links`/`metadata` (no `seo()`) |
 
-MCP fallback (SDK unavailable): `mcporter call firecrawl.firecrawl_search` / `firecrawl_scrape`.
+MCP fallback (SDK unavailable): `mcporter call firecrawl.firecrawl_search` / `mcporter call firecrawl.firecrawl_scrape`.
 Read chain: Firecrawl → Playwright → Jina. Probe: `agent-reach doctor --probe`.
 
 ## Zero-config quick commands
